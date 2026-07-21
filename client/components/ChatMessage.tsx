@@ -1,13 +1,13 @@
 'use client';
 
-import { MessageCircle, Lightbulb } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 import Image from 'next/image';
 
 interface Message {
   id: string;
   userId: string;
-  userName: string;
-  userAvatar: string;
+  name: string;
+  avatar: string;
   content: string;
   suggestedReply?: string;
   createdAt: string;
@@ -17,12 +17,14 @@ interface ChatMessageProps {
   message: Message;
   isCurrentUser: boolean;
   showSuggestedReply: boolean;
+  onUseSuggestion?: (text: string) => void;
 }
 
 export default function ChatMessage({
   message,
   isCurrentUser,
   showSuggestedReply,
+  onUseSuggestion,
 }: ChatMessageProps) {
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -35,53 +37,56 @@ export default function ChatMessage({
 
   return (
     <div
-      className={`flex gap-3 ${isCurrentUser ? 'flex-row-reverse' : ''}`}
+      className={`flex gap-3 ${isCurrentUser ? 'flex-row justify-end' : 'flex-row justify-start'}`}
     >
-      {/* Avatar */}
-      <div className="flex-shrink-0">
-        {message.userAvatar ? (
+      <div className="flex-shrink-0 mt-1">
+        {message.avatar ? (
           <Image
-            src={message.userAvatar}
-            alt={message.userName}
+            src={message.avatar}
+            alt={message.name}
             width={40}
             height={40}
-            className="w-10 h-10 rounded-full object-cover"
+            className="w-10 h-10 rounded-full object-cover shadow-sm"
           />
         ) : (
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shadow-sm">
             <span className="text-sm font-semibold text-primary">
-              {message.userName?.[0]?.toUpperCase()}
+              {message.name?.[0]?.toUpperCase()}
             </span>
           </div>
         )}
       </div>
 
-      {/* Message Content */}
-      <div className={`flex flex-col gap-1 ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+      <div className={`flex flex-col gap-1 ${isCurrentUser ? 'items-end text-right' : 'items-start text-left'}`}>
         <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-foreground">{message.userName}</p>
+          <p className="text-sm font-semibold text-foreground">{message.name}</p>
           <p className="text-xs text-muted-foreground">{formatTime(message.createdAt)}</p>
         </div>
 
-        {/* Message Bubble */}
         <div
-          className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
+          className={`max-w-[500px] px-4 py-3 rounded-3xl shadow-sm border ${
             isCurrentUser
-              ? 'bg-primary text-primary-foreground rounded-br-none'
-              : 'bg-card border border-border text-foreground rounded-bl-none'
+              ? 'bg-primary text-primary-foreground border-primary/20 rounded-br-none rounded-tl-3xl '
+              : 'bg-card text-foreground border-border/70 rounded-bl-none rounded-tr-3xl '
           }`}
         >
           <p className="text-sm leading-relaxed break-words">{message.content}</p>
         </div>
 
-        {/* Suggested Reply */}
         {showSuggestedReply && message.suggestedReply && !isCurrentUser && (
-          <div className="mt-2 max-w-xs lg:max-w-md p-3 bg-accent/10 border border-accent/30 rounded-lg">
+          <div className="mt-2 max-w-[500px] p-3 bg-gray border border-accent/30 rounded-2xl shadow-md">
             <div className="flex items-start gap-2">
               <Lightbulb className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-xs font-semibold text-accent mb-1">AI Suggestion</p>
-                <p className="text-xs text-foreground leading-relaxed">{message.suggestedReply}</p>
+                <p className="text-xs text-black font-semibold text-accent mb-2">AI Suggested Reply</p>
+                <p className="text-xs text-foreground leading-relaxed mb-3">{message.suggestedReply}</p>
+                <button
+                  type="button"
+                  onClick={() => onUseSuggestion?.(message.suggestedReply || "")}
+                  className="inline-flex text-red-500 cursor-pointer items-center gap-2 rounded-full border border-accent/50 bg-accent/20 px-3 py-1 text-[11px] font-semibold text-accent transition hover:bg-accent/30"
+                >
+                  Use reply
+                </button>
               </div>
             </div>
           </div>

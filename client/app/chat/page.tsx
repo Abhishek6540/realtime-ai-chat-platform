@@ -10,8 +10,8 @@ import PaymentModal from '@/components/PaymentModal';
 interface Message {
   id: string;
   userId: string;
-  userName: string;
-  userAvatar: string;
+  name: string;
+  avatar: string;
   content: string;
   suggestedReply?: string;
   createdAt: string;
@@ -34,6 +34,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const currentUserRef = useRef<User | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,6 +43,10 @@ export default function ChatPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -55,6 +60,7 @@ export default function ChatPage() {
     });
 
     newSocket.on('authenticated', (user: User) => {
+      currentUserRef.current = user;
       setCurrentUser(user);
       newSocket.emit('load-messages');
       setLoading(false);
@@ -68,8 +74,12 @@ export default function ChatPage() {
       setMessages((prev) => [...prev, message]);
     });
 
+    newSocket.on('premium-updated', (data: { isPremium: boolean }) => {
+      setCurrentUser((prev) => (prev ? { ...prev, isPremium: data.isPremium } : null));
+    });
+
     newSocket.on('user-became-premium', (data: any) => {
-      if (data.userId === currentUser?.id) {
+      if (data.userId === currentUserRef.current?.id) {
         setCurrentUser((prev) => (prev ? { ...prev, isPremium: true } : null));
       }
     });
@@ -80,7 +90,7 @@ export default function ChatPage() {
     });
 
     newSocket.on('error', (error: string) => {
-      console.error('[v0] Socket error:', error);
+      console.error('Socket error:', error);
     });
 
     newSocket.emit('authenticate', token);
@@ -90,7 +100,7 @@ export default function ChatPage() {
     return () => {
       newSocket.disconnect();
     };
-  }, [router, currentUser?.id]);
+  }, [router]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +109,15 @@ export default function ChatPage() {
     socket.emit('send-message', { content: inputValue });
     setInputValue('');
   };
+
+  const handleUseSuggestion = (suggestion: string) => {
+    setInputValue(suggestion);
+  };
+
+  const latestSuggestion = messages
+    .slice()
+    .reverse()
+    .find((message) => message.suggestedReply);
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -123,7 +142,6 @@ export default function ChatPage() {
 
   return (
     <main className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10">
         <div className="max-w-4xl mx-auto h-16 px-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -165,7 +183,6 @@ export default function ChatPage() {
         </div>
       </header>
 
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto max-w-4xl w-full mx-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center gap-4">
@@ -181,16 +198,27 @@ export default function ChatPage() {
               key={message.id}
               message={message}
               isCurrentUser={message.userId === currentUser?.id}
-              showSuggestedReply={currentUser?.isPremium && message.suggestedReply}
+              showSuggestedReply={Boolean(message.suggestedReply)}
+              // primaryUserIsPremium={currentUser?.isPremium || false}
+              onUseSuggestion={handleUseSuggestion}
             />
           ))
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
       <footer className="bg-card border-t border-border sticky bottom-0">
         <div className="max-w-4xl mx-auto p-4">
+          {/* {currentUser?.isPremium && latestSuggestion?.suggestedReply && (
+            <button
+              type="button"
+              onClick={() => handleUseSuggestion(latestSuggestion.suggestedReply!)}
+              className="mb-3 text-black inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/20 transition"
+            >
+              <span className="text-xs">💡</span>
+              <span>{latestSuggestion.suggestedReply}</span>
+            </button>
+          )} */}
           <form onSubmit={handleSendMessage} className="flex gap-3">
             <input
               type="text"
@@ -216,7 +244,6 @@ export default function ChatPage() {
         </div>
       </footer>
 
-      {/* Payment Modal */}
       {showPaymentModal && (
         <PaymentModal
           isOpen={showPaymentModal}

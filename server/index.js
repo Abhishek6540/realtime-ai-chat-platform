@@ -9,23 +9,46 @@ import { initSocket } from "./config/socket.js";
 
 dotenv.config();
 
-const PORT = process.env.PORT || 5000;
-const app = express();
+class AppServer {
+  constructor() {
+    this.app = express();
+    this.port = process.env.PORT || 5000;
+    this.server = http.createServer(this.app);
+  }
 
+  configureMiddleware() {
+    this.app.use(cors());
+    this.app.use(express.json());
+  }
 
-app.use(cors());
-app.use(express.json());
+  configureRoutes() {
+    this.app.use("/api/auth", authRoutes);
+    this.app.use("/api/payments", paymentRoutes);
+  }
 
-connectDB();
+  initializeSocket() {
+    initSocket(this.server);
+  }
 
-const server = http.createServer(app);
+  async initializeDatabase() {
+    await connectDB();
+  }
 
-initSocket(server);
+  async start() {
+    this.configureMiddleware();
+    this.configureRoutes();
+    this.initializeSocket();
+    await this.initializeDatabase();
 
-app.use("/api/auth", authRoutes);
-app.use("/api/payments", paymentRoutes);
+    this.server.listen(this.port, () => {
+      console.log(`Server running on ${this.port}`);
+    });
+  }
+}
 
+const appServer = new AppServer();
 
-server.listen(PORT, () => {
-  console.log(`Server running on ${PORT}`);
+appServer.start().catch((error) => {
+  console.error("Failed to start server:", error);
+  process.exit(1);
 });
