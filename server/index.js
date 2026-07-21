@@ -16,10 +16,13 @@ class AppServer {
     this.server = http.createServer(this.app);
   }
 
-  configureMiddleware() {
-    this.app.use(cors());
+ configureMiddleware() {
+    this.app.use(cors({
+        origin: "*"
+    }));
+
     this.app.use(express.json());
-  }
+}
 
   configureRoutes() {
     this.app.use("/api/auth", authRoutes);
