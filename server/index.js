@@ -6,7 +6,7 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import { initSocket } from "./config/socket.js";
-
+ 
 dotenv.config();
 
 class AppServer {
